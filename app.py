@@ -1,8 +1,13 @@
 
-from flask import Flask, request, jsonify
 import os
 
+from flask import Flask, jsonify, request
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+
 app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY")
+csrf = CSRFProtect(app)
 
 ALLOWED_EXTENSIONS = ["png", "jpg", "jpeg"]
 
@@ -30,6 +35,11 @@ def home():
     return "Flask Image Recognition Application"
 
 
+@app.route("/csrf-token", methods=["GET"])
+def get_csrf_token():
+    return jsonify({"csrf_token": generate_csrf()})
+
+
 @app.route("/predict", methods=["POST"])
 def predict():
     if "image" not in request.files:
@@ -52,4 +62,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

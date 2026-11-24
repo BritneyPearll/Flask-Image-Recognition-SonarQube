@@ -1,4 +1,6 @@
 
+import io
+
 import pytest
 
 from app import app, allowed_file, recognize_image
@@ -6,7 +8,11 @@ from app import app, allowed_file, recognize_image
 
 @pytest.fixture
 def client():
-    app.config["TESTING"] = True
+    app.config.update(
+        TESTING=True,
+        SECRET_KEY="temporary-test-key-not-for-production",
+        WTF_CSRF_ENABLED=True,
+    )
     with app.test_client() as test_client:
         yield test_client
 
@@ -40,6 +46,49 @@ def test_recognize_unknown():
 
 
 def test_predict_without_image(client):
-    response = client.post("/predict")
+    token_response = client.get("/csrf-token")
+    assert token_response.status_code == 200
+
+    token = token_response.json["csrf_token"]
+    response = client.post(
+        "/predict",
+        headers={"X-CSRFToken": token},
+    )
+
     assert response.status_code == 400
     assert response.json["error"] == "No image uploaded"
+
+
+def test_predict_rejects_missing_csrf_token(client):
+    response = client.post(
+        "/predict",
+        data={
+            "image": (
+                io.BytesIO(b"sample image content"),
+                "cat.jpg",
+            )
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+
+
+def test_predict_with_valid_csrf_token(client):
+    token_response = client.get("/csrf-token")
+    token = token_response.json["csrf_token"]
+
+    response = client.post(
+        "/predict",
+        data={
+            "image": (
+                io.BytesIO(b"sample image content"),
+                "cat.jpg",
+            )
+        },
+        headers={"X-CSRFToken": token},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.json["prediction"] == "Cat"
