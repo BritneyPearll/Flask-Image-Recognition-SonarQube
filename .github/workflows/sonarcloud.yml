@@ -34,10 +34,9 @@ jobs:
           python -m pytest tests -v --cov=app --cov-report=xml:coverage.xml --cov-report=term
 
       - name: Verify coverage report
-        run: |
-          test -s coverage.xml
+        run: test -s coverage.xml
 
       - name: SonarQube Cloud scan
-       uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
